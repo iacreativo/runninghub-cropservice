@@ -241,11 +241,33 @@ async def execute(
             
             code = poll_json.get("code")
             if code == 0:
-                # Success! Return all outputs
+                # Extract only fileUrl from each output object
+                raw_outputs = poll_json.get("data", [])
+                output_urls = []
+                
+                # Handle both array and object formats
+                if isinstance(raw_outputs, list):
+                    for item in raw_outputs:
+                        if isinstance(item, dict):
+                            url = item.get("fileUrl") or item.get("url")
+                            if url:
+                                output_urls.append(url)
+                        elif isinstance(item, str):
+                            output_urls.append(item)
+                elif isinstance(raw_outputs, dict):
+                    for key, value in raw_outputs.items():
+                        if isinstance(value, dict):
+                            url = value.get("fileUrl") or value.get("url")
+                            if url:
+                                output_urls.append(url)
+                        elif isinstance(value, str):
+                            output_urls.append(value)
+                
                 return {
                     "status": "success",
                     "taskId": task_id,
-                    "outputs": poll_json["data"] # This is usually an array of URLs
+                    "output": output_urls[0] if output_urls else None,  # First image for compatibility
+                    "outputs": output_urls  # Simple array of URL strings
                 }
             elif code in (804, 813):
                 # 804 = Still running, 813 = Queued
